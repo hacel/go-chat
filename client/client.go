@@ -1,26 +1,25 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
-	"google.golang.org/grpc"
-
 	pb "github.com/hacel/go-chat/chat"
+	"google.golang.org/grpc"
 )
 
 var (
 	serverAddr = flag.String("server_addr", "localhost:10000", "The server address in the format of host:port")
 )
 
-// runRouteChat receives a sequence of route notes, while sending notes for various locations.
 func runChat(client pb.ChatClient) {
-	msg := []string{"msg1", "msg2"}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	stream, err := client.Chat(ctx)
@@ -37,26 +36,32 @@ func runChat(client pb.ChatClient) {
 				return
 			}
 			if err != nil {
-				log.Fatalf("Failed to receive a note: %v", err)
+				log.Fatalf("Failed to receive a message: %v", err)
 			}
-			log.Printf("Got message %s", in.Body)
+			fmt.Printf("\b\b%s %s: %s\n> ", time.Now().Format("15:04"), in.From, in.Body)
 		}
 	}()
-	for _, message := range msg {
-		if err := stream.Send(message); err != nil {
-			log.Fatalf("Failed to send a note: %v", err)
+	go func() {
+		stream.Send(&pb.ChatMessage{Body: "User Connected."})
+		for {
+			var body string
+			fmt.Printf("> ")
+			scanner := bufio.NewScanner(os.Stdin)
+			if scanner.Scan() {
+				body = scanner.Text()
+			}
+			msg := pb.ChatMessage{Body: body}
+			if err := stream.Send(&msg); err != nil {
+				log.Fatalf("Failed to send a note: %v", err)
+			}
 		}
-	}
-	stream.CloseSend()
+	}()
 	<-waitc
-
 }
 
 func main() {
 	flag.Parse()
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithBlock())
-	conn, err := grpc.Dial(*serverAddr, opts...)
+	conn, err := grpc.Dial(*serverAddr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}

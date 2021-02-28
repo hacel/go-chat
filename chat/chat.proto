@@ -10,5 +10,6 @@ service Chat {
 }
 
 message ChatMessage {
-    string body = 1;
+    string from = 1;
+    string body = 2;
 }
