@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "github.com/hacel/go-chat/chat";
+
+package chat;
+
+service Chat {
+    rpc Chat(stream ChatMessage) returns (stream ChatMessage) {}
+
+}
+
+message ChatMessage {
+    string body = 1;
+}
