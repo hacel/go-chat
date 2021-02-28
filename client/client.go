@@ -68,5 +68,9 @@ func main() {
 	defer conn.Close()
 	client := pb.NewChatClient(conn)
 
+	msg, err := client.Greeting(context.Background(), &pb.ChatMessage{From: "asd", Body: "brwge"})
+	if err != nil {
+	}
+	log.Printf("%s", msg)
 	runChat(client)
 }
