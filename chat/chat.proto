@@ -6,7 +6,6 @@ package chat;
 
 service Chat {
     rpc Chat(stream ChatMessage) returns (stream ChatMessage) {}
-    rpc Greeting(ChatMessage) returns (ChatMessage) {}
 }
 
 message ChatMessage {

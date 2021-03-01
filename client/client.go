@@ -12,10 +12,12 @@ import (
 
 	pb "github.com/hacel/go-chat/chat"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
-	serverAddr = flag.String("server_addr", "localhost:10000", "The server address in the format of host:port")
+	serverAddr = flag.String("server_addr", "localhost:50051", "The server address in the format of host:port")
+	certFile   = flag.String("cert", "keys/ca_cert.pem", "The file containing the CA root cert file")
 )
 
 func runChat(client pb.ChatClient) {
@@ -52,7 +54,7 @@ func runChat(client pb.ChatClient) {
 			}
 			msg := pb.ChatMessage{Body: body}
 			if err := stream.Send(&msg); err != nil {
-				log.Fatalf("Failed to send a note: %v", err)
+				log.Fatalf("Failed to send a message: %v", err)
 			}
 		}
 	}()
@@ -61,16 +63,18 @@ func runChat(client pb.ChatClient) {
 
 func main() {
 	flag.Parse()
-	conn, err := grpc.Dial(*serverAddr, grpc.WithInsecure(), grpc.WithBlock())
+
+	creds, err := credentials.NewClientTLSFromFile(*certFile, "")
+	if err != nil {
+		log.Fatalf("Failed to generate credentials: %v", err)
+	}
+
+	conn, err := grpc.Dial(*serverAddr, grpc.WithTransportCredentials(creds), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}
 	defer conn.Close()
 	client := pb.NewChatClient(conn)
 
-	msg, err := client.Greeting(context.Background(), &pb.ChatMessage{From: "asd", Body: "brwge"})
-	if err != nil {
-	}
-	log.Printf("%s", msg)
 	runChat(client)
 }
